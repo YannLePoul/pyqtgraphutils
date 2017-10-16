@@ -1,6 +1,7 @@
-from PyQt4 import QtGui
-from PyQt4 import QtCore
+from PyQt5 import QtGui
+from PyQt5 import QtCore
 import pyqtgraph as pg
+from pyqtgraph.Point import Point
 
 
 class LineSegmentItem(pg.GraphicsObject):
@@ -25,21 +26,37 @@ class LineSegmentItem(pg.GraphicsObject):
 
 
 class CircleItem(pg.GraphicsObject):
+
+    sigDragged = QtCore.Signal(object)
+    sigPositionChangeFinished = QtCore.Signal(object)
+    sigPositionChanged = QtCore.Signal(object)
+
     def __init__(self, center, radius):
         pg.GraphicsObject.__init__(self)
         self.center = center
         self.radius = radius
+        self.setCenter(center)
+        self.setRadius(radius)
         self.generatePicture()
 
     def generatePicture(self):
         self.picture = QtGui.QPicture()
         p = QtGui.QPainter(self.picture)
         p.setPen(pg.mkPen('w'))
-        p.drawEllipse(self.center[0], self.center[1], self.radius * 2, self.radius * 2)
-        p.end()
+        p.drawEllipse(QtCore.QRectF(0, 0, self.radius * 2, self.radius * 2))
 
     def paint(self, p, *args):
         p.drawPicture(0, 0, self.picture)
+
+    def setRadius(self, radius):
+        self.radius = radius
+        self.setCenter(self.center)
+        self.generatePicture()
+
+    def setCenter(self, center):
+        self.center = center
+        pg.GraphicsObject.setPos(self, Point(center.x()-self.radius, center.y()-self.radius))
+        self.update()
 
     def boundingRect(self):
         return QtCore.QRectF(self.picture.boundingRect())

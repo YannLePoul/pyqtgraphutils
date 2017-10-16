@@ -1,41 +1,71 @@
-from PyQt4 import QtGui
-import pyqtgraph as pg
 import sys
-import pyqtgraphutils as pgutils
+from PyQt5.QtCore import QUrl
+from PyQt5.QtWidgets import QApplication
+from PyQt5.QtQuick import QQuickView
+from PyQt5.QtQml import QQmlApplicationEngine,QQmlEngine, QQmlComponent
+
+from PyQt5.QtCore import QT_VERSION_STR
+from PyQt5.Qt import PYQT_VERSION_STR
+from sip import SIP_VERSION_STR
+
+print("Qt version:", QT_VERSION_STR)
+print("SIP version:", SIP_VERSION_STR)
+print("PyQt version:", PYQT_VERSION_STR)
+
+from PyQt5.QtWidgets import QApplication
+from pyqtgraph.Qt import QtCore, QtGui
+import pyqtgraph as pg
+import pyqtgraphutils.pyqtgraphutils as pgutils
+
+import numpy as np
+
+from scipy import ndimage
+from scipy import misc
 
 
-class TestApp(QtGui.QWidget):
-    def initUI(self):
-        self.mainLayout = QtGui.QHBoxLayout()
-        self.plotui = pg.PlotWidget()
+app = QApplication([])
 
-        item = pgutils.LineSegmentItem([10,20], [40,40])
-        self.plotui.addItem(item)
+## Create window with GraphicsView widget
+w = pg.GraphicsView()
+w.show()
+w.resize(800,800)
+w.setWindowTitle('pyqtgraph example: Draw')
 
-        item1 = pgutils.CircleItem([10, 20], 50)
-        self.plotui.addItem(item1)
+view = pg.ViewBox()
+w.setCentralItem(view)
 
-        item2 = pgutils.RectangleItem([80, 80], [200, 100])
-        self.plotui.addItem(item2)
+## lock the aspect ratio
+view.setAspectLocked(True)
 
-        self.mainLayout.addWidget(self.plotui)
-        self.setLayout(self.mainLayout)
+## Create image item
+I =  misc.imread('/media/badboy/DATA_SSD/postdoc/SpotDisectionNew/imagingData/raw/909/brightfield/2016-12-21_909-old_370_9.tif')
+Mask =  misc.imread('/media/badboy/DATA_SSD/postdoc/SpotDisectionNew/imagingData/aligned/909/BrMasks/2016-12-21_909-old_370_9.tif')
+Mask = Mask.astype(float)/ 25
+I = I.astype(float)
+print(Mask.max())
+print(Mask.min())
 
-    def __init__(self, parent=None):
-        super(TestApp, self).__init__(parent)
-        self.initUI()
+#Mask
+# 10*np.ones((200,200))
+imageItem = pg.ImageItem(I)
+maskItem = pg.ImageItem(Mask)
+
+view.addItem(imageItem)
+view.addItem(maskItem)
+maskItem.setZValue(10)  # make sure this image is on top
+maskItem.setOpacity(0.5)
+## Set initial view bounds
+view.setRange(QtCore.QRectF(0, 0, Mask.shape[0], Mask.shape[1]))
 
 
-def main():
-    app = QtGui.QApplication(sys.argv)
-    w = TestApp()
-    w.resize(600, 600)
-    w.move(300, 300)
-    w.setWindowTitle('Test pyqtgraph')
-    w.show()
-
-    sys.exit(app.exec_())
 
 
+proxy = pg.SignalProxy(view.scene().sigMouseMoved, rateLimit=60, slot=mouseMoved)
+## Start Qt event loop unless running in interactive mode or using pyside.
 if __name__ == '__main__':
-    main()
+    import sys
+    if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
+        QApplication.instance().exec_()
+
+
+
